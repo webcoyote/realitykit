@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Run the project without building it
+set -euo pipefail
+START_TIME=$(date +%s.%N)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR/.."
+
+# Use iPhone 16 Pro with iOS 18.5 (latest available)
+SIMULATOR_ID="C692F47B-CF1C-400E-956D-B22E3079BF40"
+
+# Open Simulator app to make window visible
+echo "📱 Opening simulator"
+open -a Simulator
+
+# Check if simulator is already booted, boot if needed
+SIMULATOR_STATE=$(xcrun simctl list devices | grep "$SIMULATOR_ID" | grep -o "(.*)" | tr -d "()")
+if [ "$SIMULATOR_STATE" != "Booted" ]; then
+    echo "🔄 Booting simulator"
+    xcrun simctl boot "$SIMULATOR_ID" 2>/dev/null || true
+    sleep 3
+fi
+
+# Look for the app in the DerivedData build products
+APP_PATH=".DerivedData/Build/Products/Debug-iphonesimulator/RealityKitApp.app"
+if [ ! -d "$APP_PATH" ]; then
+    echo "❌ Could not find built app at: $APP_PATH"
+    echo "   Run 'scripts/build' first to build the app"
+    exit 1
+fi
+
+echo "📦 Installing RealityKitApp from: $APP_PATH"
+xcrun simctl install "$SIMULATOR_ID" "$APP_PATH"
+
+echo "🚀 Launching RealityKitApp..."
+xcrun simctl launch "$SIMULATOR_ID" "com.codeofhonor.RealityKitApp" "$@"
+
+END_TIME=$(date +%s.%N)
+ELAPSED_TIME=$(echo "$END_TIME - $START_TIME" | bc --mathlib | xargs printf "%.2f\n")
+echo "✅ Running in $ELAPSED_TIME seconds!"

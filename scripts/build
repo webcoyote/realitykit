@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+START_TIME=$(date +%s.%N)
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR/.."
+
+echo "🔨 Building app..."
+
+# Build iPhone app for iPhone 15 simulator
+xcodebuild \
+    -project RealityKitApp.xcodeproj \
+    -scheme RealityKitApp \
+    -configuration Debug \
+    -destination "platform=iOS Simulator,arch=arm64,id=DADA95CB-9171-4B9E-95EE-EBD53300B8DD" \
+    -derivedDataPath "$PWD/.DerivedData" \
+    -parallelizeTargets \
+    -jobs $(sysctl -n hw.ncpu) \
+    CODE_SIGNING_ALLOWED=NO \
+    -quiet \
+    build
+
+END_TIME=$(date +%s.%N)
+ELAPSED_TIME=$(echo "$END_TIME - $START_TIME" | bc --mathlib | xargs printf "%.2f\n")
+echo "✅ Build completed in $ELAPSED_TIME seconds!"

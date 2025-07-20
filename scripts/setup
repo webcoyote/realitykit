@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+START_TIME=$(date +%s.%N)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR/.."
+
+echo "Checking for build tools ..."
+command -v direnv &>/dev/null || brew install direnv
+
+install-git-hooks
+
+END_TIME=$(date +%s.%N)
+ELAPSED_TIME=$(echo "$END_TIME - $START_TIME" | bc --mathlib | xargs printf "%.2f\n")
+echo "✅ Setup complete in $ELAPSED_TIME seconds."

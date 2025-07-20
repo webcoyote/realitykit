@@ -1,0 +1,8 @@
+worktrees/
+.DerivedData/
+.DS_Store
+.claude/settings.local.json
+
+# Xcode
+*.xcuserstate
+*.xcuserdatad/
