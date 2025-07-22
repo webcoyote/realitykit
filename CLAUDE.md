@@ -15,3 +15,5 @@ debug              # Debug app
 setup              # Configure tools and git hooks
 worktree           # Setup git worktrees and branches
 ```
+
+Claude: after making changes, build the application if you'd didn't build it already, and run the simulator.

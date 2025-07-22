@@ -12,14 +12,24 @@ class ViewController: UIViewController {
     var modelDropdownButton: UIButton!
     var previewEntity: Entity?
     var previewAnchor: AnchorEntity?
+    var cameraDistance: Float = 0.5
+    var cameraRotation: Float = 0
+    var cameraElevation: Float = 0
+    var cameraEntity: PerspectiveCamera?
+    var modelBounds: BoundingBox = BoundingBox(min: .zero, max: .zero)
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         setupARView()
+        loadBundledModels()
         setupDefaultModels()
         setupUI()
         setupSwipeGestures()
+        
+        // Update UI to show the first model
+        updateModelNameLabel()
+        updatePreview()
     }
     
     private func setupARView() {
@@ -27,34 +37,76 @@ class ViewController: UIViewController {
         arView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(arView)
         
+        // Use non-AR camera mode for better control
+        arView.cameraMode = .nonAR
+        
         // Add environment lighting for better visibility
         arView.environment.lighting.intensityExponent = 2.0
-        
-        // For simulator testing, add a light gray background
-        #if targetEnvironment(simulator)
         arView.environment.background = .color(.lightGray)
         
-        // Add a camera anchor for simulator
-        let cameraAnchor = AnchorEntity(world: [0, 0, 0])
+        // Create and add camera
+        cameraEntity = PerspectiveCamera()
+        cameraEntity?.camera.fieldOfViewInDegrees = 60
+        let cameraAnchor = AnchorEntity(world: .zero)
+        cameraAnchor.addChild(cameraEntity!)
         arView.scene.addAnchor(cameraAnchor)
         
         // Add directional light for better visibility
+        let lightAnchor = AnchorEntity(world: [0, 1, 0])
         let directionalLight = DirectionalLight()
         directionalLight.light.intensity = 1000
         directionalLight.light.color = .white
-        directionalLight.look(at: [0, -1, 0], from: [0, 1, 0], relativeTo: nil)
-        cameraAnchor.addChild(directionalLight)
-        #else
-        let config = ARWorldTrackingConfiguration()
-        config.planeDetection = [.horizontal]
-        arView.session.run(config)
-        #endif
+        directionalLight.look(at: [0, 0, 0], from: [0, 1, 0], relativeTo: nil)
+        lightAnchor.addChild(directionalLight)
+        arView.scene.addAnchor(lightAnchor)
+    }
+    
+    private func loadBundledModels() {
+        print("Loading bundled models...")
         
+        // Load cat.usdz from Assets.xcassets
+        if let catAsset = NSDataAsset(name: "cat") {
+            print("Found cat asset")
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("cat.usdz")
+            do {
+                try catAsset.data.write(to: tempURL)
+                let catEntity = try Entity.loadModel(contentsOf: tempURL)
+                catEntity.name = "Cat"
+                // Scale the model appropriately
+                catEntity.scale = SIMD3<Float>(repeating: 0.1)
+                defaultModels.append(catEntity)
+                print("Successfully loaded cat.usdz")
+                try? FileManager.default.removeItem(at: tempURL)
+            } catch {
+                print("Failed to load cat.usdz: \(error)")
+            }
+        } else {
+            print("Cat asset not found in Assets.xcassets")
+        }
+        
+        // Load cosmonaut.reality
+        if let cosmonautURL = Bundle.main.url(forResource: "cosmonaut", withExtension: "reality") {
+            print("Found cosmonaut.reality at: \(cosmonautURL)")
+            do {
+                let cosmonautEntity = try Entity.load(contentsOf: cosmonautURL)
+                cosmonautEntity.name = "Cosmonaut"
+                // Scale the model appropriately
+                cosmonautEntity.scale = SIMD3<Float>(repeating: 0.1)
+                defaultModels.append(cosmonautEntity)
+                print("Successfully loaded cosmonaut.reality")
+            } catch {
+                print("Failed to load cosmonaut.reality: \(error)")
+            }
+        } else {
+            print("Cosmonaut.reality not found in bundle")
+        }
+        
+        print("Total models after loading bundled: \(defaultModels.count)")
     }
     
     private func setupDefaultModels() {
         // Create cube model
-        let cubeMesh = MeshResource.generateBox(size: 0.2)
+        let cubeMesh = MeshResource.generateBox(size: 0.1)
         let cubeMaterial = SimpleMaterial(color: .systemBlue, roughness: 0.5, isMetallic: false)
         let cubeEntity = ModelEntity(mesh: cubeMesh, materials: [cubeMaterial])
         cubeEntity.name = "Cube"
@@ -71,13 +123,7 @@ class ViewController: UIViewController {
         let boxEntity = ModelEntity(mesh: boxMesh, materials: [boxMaterial])
         boxEntity.name = "Box"
         
-        // Create large sphere model
-        let largeSphereMesh = MeshResource.generateSphere(radius: 0.15)
-        let largeSphereMaterial = SimpleMaterial(color: .systemPurple, roughness: 0.2, isMetallic: false)
-        let largeSphereEntity = ModelEntity(mesh: largeSphereMesh, materials: [largeSphereMaterial])
-        largeSphereEntity.name = "Large Sphere"
-        
-        defaultModels = [cubeEntity, sphereEntity, boxEntity, largeSphereEntity]
+        defaultModels.append(contentsOf: [cubeEntity, sphereEntity, boxEntity])
         
         // Set the first model as current
         if !defaultModels.isEmpty {
@@ -95,43 +141,90 @@ class ViewController: UIViewController {
         
         guard let modelEntity = currentModelEntity else { return }
         
-        // Create preview anchor - move it further back since objects are bigger
-        previewAnchor = AnchorEntity(world: [0, 0, -0.5])
+        // Create preview anchor at origin
+        previewAnchor = AnchorEntity(world: [0, 0, 0])
         
         // Clone the current model for preview
         previewEntity = modelEntity.clone(recursive: true)
         
-        // Add a slight rotation animation to the preview
-        if let preview = previewEntity as? ModelEntity {
-            preview.position = [0, 0, 0]
+        // Calculate bounding box and center the model
+        if let preview = previewEntity {
+            let bounds = preview.visualBounds(relativeTo: nil)
+            modelBounds = bounds
+            let center = (bounds.min + bounds.max) / 2
+            
+            // Offset the model so its center is at origin
+            preview.position = -center
+            
+            // Calculate appropriate camera distance based on model size
+            let size = bounds.max - bounds.min
+            let maxDimension = max(size.x, max(size.y, size.z))
+            cameraDistance = maxDimension * 2.16  // 1.8 * 1.2 = 2.16 (20% further back)
         }
         
         previewAnchor?.addChild(previewEntity!)
         arView.scene.addAnchor(previewAnchor!)
+        
+        // Update camera position to look at the model
+        updateCameraPosition()
     }
     
     private func setupSwipeGestures() {
-        let leftSwipe = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipe(_:)))
-        leftSwipe.direction = .left
-        arView.addGestureRecognizer(leftSwipe)
+        // Use pan gesture for continuous rotation
+        let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+        arView.addGestureRecognizer(panGesture)
         
-        let rightSwipe = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipe(_:)))
-        rightSwipe.direction = .right
-        arView.addGestureRecognizer(rightSwipe)
+        let pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
+        arView.addGestureRecognizer(pinchGesture)
     }
     
-    @objc private func handleSwipe(_ gesture: UISwipeGestureRecognizer) {
-        guard !defaultModels.isEmpty else { return }
+    @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+        let translation = gesture.translation(in: arView)
+        let rotationSpeed: Float = 0.01
         
-        if gesture.direction == .left {
-            currentModelIndex = (currentModelIndex + 1) % defaultModels.count
-        } else if gesture.direction == .right {
-            currentModelIndex = (currentModelIndex - 1 + defaultModels.count) % defaultModels.count
+        cameraRotation += Float(translation.x) * rotationSpeed
+        cameraElevation -= Float(translation.y) * rotationSpeed
+        
+        // Clamp elevation to prevent flipping
+        cameraElevation = max(min(cameraElevation, Float.pi / 2.5), -Float.pi / 2.5)
+        
+        gesture.setTranslation(.zero, in: arView)
+        updateCameraPosition()
+    }
+    
+    @objc private func handlePinch(_ gesture: UIPinchGestureRecognizer) {
+        if gesture.state == .changed {
+            guard let entity = previewEntity else { return }
+            
+            let scale = Float(gesture.scale)
+            entity.scale *= SIMD3<Float>(repeating: scale)
+            
+            // Clamp scale to reasonable limits
+            let minScale: Float = 0.01
+            let maxScale: Float = 10.0
+            entity.scale = SIMD3<Float>(
+                repeating: min(max(entity.scale.x, minScale), maxScale)
+            )
+            
+            gesture.scale = 1.0
         }
+    }
+    
+    private func updateCameraPosition() {
+        guard let camera = cameraEntity else { return }
         
-        currentModelEntity = defaultModels[currentModelIndex]
-        updateModelNameLabel()
-        updatePreview()
+        // Calculate camera position with both horizontal rotation and vertical elevation
+        let horizontalDistance = cos(cameraElevation) * cameraDistance
+        let x = sin(cameraRotation) * horizontalDistance
+        let y = sin(cameraElevation) * cameraDistance
+        let z = cos(cameraRotation) * horizontalDistance
+        let cameraPosition = SIMD3<Float>(x, y, z)
+        
+        // Update camera position
+        camera.position = cameraPosition
+        
+        // Make camera look at origin
+        camera.look(at: [0, 0, 0], from: cameraPosition, relativeTo: nil)
     }
     
     private func updateModelNameLabel() {

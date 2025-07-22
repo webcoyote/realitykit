@@ -13,6 +13,7 @@
 		1D36232B1E94E9D8005790D5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1D36232A1E94E9D8005790D5 /* Assets.xcassets */; };
 		1D36232E1E94E9D8005790D5 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 1D36232C1E94E9D8005790D5 /* LaunchScreen.storyboard */; };
 		1D3623351E94E9D8005790D6 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D3623341E94E9D8005790D6 /* SceneDelegate.swift */; };
+		1D3623371E94E9D8005790D8 /* cosmonaut.reality in Resources */ = {isa = PBXBuildFile; fileRef = 1D3623361E94E9D8005790D7 /* cosmonaut.reality */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,6 +25,7 @@
 		1D36232D1E94E9D8005790D5 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		1D36232F1E94E9D8005790D5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1D3623341E94E9D8005790D6 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		1D3623361E94E9D8005790D7 /* cosmonaut.reality */ = {isa = PBXFileReference; lastKnownFileType = file; path = cosmonaut.reality; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,6 +65,7 @@
 				1D36232A1E94E9D8005790D5 /* Assets.xcassets */,
 				1D36232C1E94E9D8005790D5 /* LaunchScreen.storyboard */,
 				1D36232F1E94E9D8005790D5 /* Info.plist */,
+				1D3623361E94E9D8005790D7 /* cosmonaut.reality */,
 			);
 			path = RealityKitApp;
 			sourceTree = "<group>";
@@ -127,6 +130,7 @@
 				1D36232E1E94E9D8005790D5 /* LaunchScreen.storyboard in Resources */,
 				1D36232B1E94E9D8005790D5 /* Assets.xcassets in Resources */,
 				1D3623291E94E9D8005790D5 /* Main.storyboard in Resources */,
+				1D3623371E94E9D8005790D8 /* cosmonaut.reality in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
