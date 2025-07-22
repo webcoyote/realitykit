@@ -4,6 +4,8 @@
 
 ## Development Commands
 
+Tools in scripts directory. When building the application, use the `build` script.
+
 ```bash
 claude             # Run claude with extra options
 build              # Build app
