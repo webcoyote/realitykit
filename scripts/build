@@ -15,7 +15,7 @@ xcodebuild \
     -destination "platform=iOS Simulator,arch=arm64,id=DADA95CB-9171-4B9E-95EE-EBD53300B8DD" \
     -derivedDataPath "$PWD/.DerivedData" \
     -parallelizeTargets \
-    -jobs $(sysctl -n hw.ncpu) \
+    -jobs "$(sysctl -n hw.ncpu)" \
     CODE_SIGNING_ALLOWED=NO \
     -quiet \
     build
