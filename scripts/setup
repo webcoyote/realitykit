@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-set -euo pipefail
-START_TIME=$(date +%s.%N)
+set -Eeuo pipefail
+trap 'echo "${BASH_SOURCE[0]}: line $LINENO: $BASH_COMMAND: exitcode $?"' ERR
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/.."
 
-echo "Checking for build tools ..."
+echo "Installing build tools ..."
 command -v direnv &>/dev/null || brew install direnv
+command -v git-lfs &>/dev/null || brew install git-lfs
+xcode-select -p &>/dev/null || xcode-select --install
 
-install-git-hooks
-
-END_TIME=$(date +%s.%N)
-ELAPSED_TIME=$(echo "$END_TIME - $START_TIME" | bc --mathlib | xargs printf "%.2f\n")
-echo "✅ Setup complete in $ELAPSED_TIME seconds."
+# Set Xcode so that it writes derived data into the project directory.
+# It's unfortunate that this has to be set globally, but other methods didn't work
+echo "Configuration xcode..."
+defaults write com.apple.dt.Xcode DerivedDataLocationStyle Custom
+defaults write com.apple.dt.Xcode IDECustomDerivedDataLocation ".DerivedData"
