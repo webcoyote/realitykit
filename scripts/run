@@ -5,24 +5,32 @@ START_TIME=$(date +%s.%N)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/.."
 
-# Use iPhone 16 Pro with iOS 18.5 (latest available)
-SIMULATOR_ID="C692F47B-CF1C-400E-956D-B22E3079BF40"
+# Find the booted simulator or use any available iPhone simulator
+SIMULATOR_ID=$(xcrun simctl list devices booted iPhone | grep -o '[A-F0-9]\{8\}-[A-F0-9]\{4\}-[A-F0-9]\{4\}-[A-F0-9]\{4\}-[A-F0-9]\{12\}' | head -1)
 
-# Open Simulator app to make window visible
-echo "📱 Opening simulator"
-open -a Simulator
+if [ -z "$SIMULATOR_ID" ]; then
+    # No booted simulator, find any available iPhone simulator
+    SIMULATOR_ID=$(xcrun simctl list devices available iPhone | grep -o '[A-F0-9]\{8\}-[A-F0-9]\{4\}-[A-F0-9]\{4\}-[A-F0-9]\{4\}-[A-F0-9]\{12\}' | head -1)
 
-# Check if simulator is already booted, boot if needed
-SIMULATOR_STATE=$(xcrun simctl list devices | grep "$SIMULATOR_ID" | grep -o "(.*)" | tr -d "()")
-if [ "$SIMULATOR_STATE" != "Booted" ]; then
-    echo "🔄 Booting simulator"
+    if [ -z "$SIMULATOR_ID" ]; then
+        echo "❌ No iPhone simulator found"
+        exit 1
+    fi
+
+    # Open Simulator app and boot the device
+    echo "📱 Opening simulator"
+    open -a Simulator
+
+    echo "🔄 Booting simulator $SIMULATOR_ID"
     xcrun simctl boot "$SIMULATOR_ID" 2>/dev/null || true
     sleep 3
+else
+    echo "📱 Using booted simulator $SIMULATOR_ID"
 fi
 
 # Look for the app in the DerivedData build products
 APP_PATH=".DerivedData/Build/Products/Debug-iphonesimulator/RealityKitApp.app"
-if [ ! -d "$APP_PATH" ]; then
+if [[ ! -d "$APP_PATH" ]]; then
     echo "❌ Could not find built app at: $APP_PATH"
     echo "   Run 'scripts/build' first to build the app"
     exit 1

@@ -7,7 +7,7 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Check if base icon exists
-if [ ! -f "$SCRIPT_DIR/icon-1024.png" ]; then
+if [[ ! -f "$SCRIPT_DIR/icon-1024.png" ]]; then
     echo "Error: icon-1024.png not found in $SCRIPT_DIR"
     exit 1
 fi
